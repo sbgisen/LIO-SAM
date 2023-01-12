@@ -1,8 +1,7 @@
 #include "utility.h"
 #include "lio_sam/cloud_info.h"
 
-//add modify
-struct VelodynePointXYZRGBIRT
+struct EIGEN_ALIGN16 VelodynePointXYZRGBIRT
 {
     PCL_ADD_POINT4D
     PCL_ADD_RGB;
@@ -10,14 +9,13 @@ struct VelodynePointXYZRGBIRT
     uint16_t ring;
     float time;
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
-} EIGEN_ALIGN16;
+};
 POINT_CLOUD_REGISTER_POINT_STRUCT(VelodynePointXYZRGBIRT, 
                                   (float, x, x)(float, y, y)(float, z, z)
                                   (float, rgb, rgb)
                                   (float, intensity, intensity)
                                   (uint16_t, ring, ring)
                                   (float, time, time))
-//end modify
 
 struct OusterPointXYZIRT {
     PCL_ADD_POINT4D;
@@ -36,7 +34,7 @@ POINT_CLOUD_REGISTER_POINT_STRUCT(OusterPointXYZIRT,
 )
 
 // Use the Velodyne point format as a common representation
-using PointXYZRGBIRT = VelodynePointXYZRGBIRT;//using PointXYZIRT = VelodynePointXYZIRT;
+using PointXYZRGBIRT = VelodynePointXYZRGBIRT;
 
 const int queueLength = 2000;
 
@@ -71,7 +69,7 @@ private:
     bool firstPointFlag;
     Eigen::Affine3f transStartInverse;
 
-    pcl::PointCloud<PointXYZRGBIRT>::Ptr laserCloudIn; //pcl::PointCloud<PointXYZIRT>::Ptr laserCloudIn;
+    pcl::PointCloud<PointXYZRGBIRT>::Ptr laserCloudIn;
     pcl::PointCloud<OusterPointXYZIRT>::Ptr tmpOusterCloudIn;
     pcl::PointCloud<PointType>::Ptr   fullCloud;
     pcl::PointCloud<PointType>::Ptr   extractedCloud;
@@ -111,7 +109,7 @@ public:
 
     void allocateMemory()
     {
-        laserCloudIn.reset(new pcl::PointCloud<PointXYZRGBIRT>()); // laserCloudIn.reset(new pcl::PointCloud<PointXYZIRT>());
+        laserCloudIn.reset(new pcl::PointCloud<PointXYZRGBIRT>());
         tmpOusterCloudIn.reset(new pcl::PointCloud<OusterPointXYZIRT>());
         fullCloud.reset(new pcl::PointCloud<PointType>());
         extractedCloud.reset(new pcl::PointCloud<PointType>());
@@ -519,9 +517,9 @@ public:
         newPoint.y = transBt(1,0) * point->x + transBt(1,1) * point->y + transBt(1,2) * point->z + transBt(1,3);
         newPoint.z = transBt(2,0) * point->x + transBt(2,1) * point->y + transBt(2,2) * point->z + transBt(2,3);
         newPoint.intensity = point->intensity;
-        newPoint.b = point->b;// add
-        newPoint.g = point->g;// add
-        newPoint.r = point->r;// add
+        newPoint.b = point->b;
+        newPoint.g = point->g;
+        newPoint.r = point->r;
 
         return newPoint;
     }
@@ -537,9 +535,9 @@ public:
             thisPoint.y = laserCloudIn->points[i].y;
             thisPoint.z = laserCloudIn->points[i].z;
             thisPoint.intensity = laserCloudIn->points[i].intensity;
-            thisPoint.b = laserCloudIn->points[i].b;// add
-            thisPoint.g = laserCloudIn->points[i].g;// add
-            thisPoint.r = laserCloudIn->points[i].r;// add
+            thisPoint.b = laserCloudIn->points[i].b;
+            thisPoint.g = laserCloudIn->points[i].g;
+            thisPoint.r = laserCloudIn->points[i].r;
 
             float range = pointDistance(thisPoint);
             if (range < lidarMinRange || range > lidarMaxRange)
