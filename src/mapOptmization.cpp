@@ -299,6 +299,9 @@ public:
             cloudOut->points[i].x = transCur(0,0) * pointFrom.x + transCur(0,1) * pointFrom.y + transCur(0,2) * pointFrom.z + transCur(0,3);
             cloudOut->points[i].y = transCur(1,0) * pointFrom.x + transCur(1,1) * pointFrom.y + transCur(1,2) * pointFrom.z + transCur(1,3);
             cloudOut->points[i].z = transCur(2,0) * pointFrom.x + transCur(2,1) * pointFrom.y + transCur(2,2) * pointFrom.z + transCur(2,3);
+            cloudOut->points[i].b = pointFrom.b;
+            cloudOut->points[i].g = pointFrom.g;
+            cloudOut->points[i].r = pointFrom.r;
             cloudOut->points[i].intensity = pointFrom.intensity;
         }
         return cloudOut;
