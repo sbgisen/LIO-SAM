@@ -344,6 +344,7 @@ void imuRPY2rosRPY(sensor_msgs::Imu *thisImuMsg, T *rosRoll, T *rosPitch, T *ros
     *rosYaw = imuYaw;
 }
 
+
 float pointDistance(PointType p)
 {
     return sqrt(p.x*p.x + p.y*p.y + p.z*p.z);
