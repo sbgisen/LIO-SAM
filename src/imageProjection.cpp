@@ -1,9 +1,23 @@
 #include "utility.h"
 #include "lio_sam/cloud_info.h"
 
+struct EIGEN_ALIGN16 VelodynePointXYZIRT
+{
+    PCL_ADD_POINT4D;
+    PCL_ADD_INTENSITY;
+    uint16_t ring;
+    float time;
+    EIGEN_MAKE_ALIGNED_OPERATOR_NEW
+};
+POINT_CLOUD_REGISTER_POINT_STRUCT(VelodynePointXYZIRT, 
+                                  (float, x, x)(float, y, y)(float, z, z)
+                                  (float, intensity, intensity)
+                                  (uint16_t, ring, ring)
+                                  (float, time, time))
+
 struct EIGEN_ALIGN16 VelodynePointXYZRGBIRT
 {
-    PCL_ADD_POINT4D
+    PCL_ADD_POINT4D;
     PCL_ADD_RGB;
     PCL_ADD_INTENSITY;
     uint16_t ring;
@@ -17,7 +31,8 @@ POINT_CLOUD_REGISTER_POINT_STRUCT(VelodynePointXYZRGBIRT,
                                   (uint16_t, ring, ring)
                                   (float, time, time))
 
-struct OusterPointXYZIRT {
+struct EIGEN_ALIGN16 OusterPointXYZIRT
+{
     PCL_ADD_POINT4D;
     float intensity;
     uint32_t t;
@@ -26,18 +41,41 @@ struct OusterPointXYZIRT {
     uint16_t noise;
     uint32_t range;
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
-} EIGEN_ALIGN16;
+};
 POINT_CLOUD_REGISTER_POINT_STRUCT(OusterPointXYZIRT,
-    (float, x, x) (float, y, y) (float, z, z) (float, intensity, intensity)
-    (uint32_t, t, t) (uint16_t, reflectivity, reflectivity)
-    (uint8_t, ring, ring) (uint16_t, noise, noise) (uint32_t, range, range)
-)
+                                  (float, x, x)(float, y, y)(float, z, z)
+                                  (float, intensity, intensity)
+                                  (uint32_t, t, t)
+                                  (uint16_t, reflectivity, reflectivity)
+                                  (uint8_t, ring, ring)
+                                  (uint16_t, noise, noise)
+                                  (uint32_t, range, range))
 
-// Use the Velodyne point format as a common representation
-using PointXYZRGBIRT = VelodynePointXYZRGBIRT;
+struct EIGEN_ALIGN16 OusterPointXYZRGBIRT
+{
+    PCL_ADD_POINT4D;
+    PCL_ADD_RGB;
+    float intensity;
+    uint32_t t;
+    uint16_t reflectivity;
+    uint8_t ring;
+    uint16_t noise;
+    uint32_t range;
+    EIGEN_MAKE_ALIGNED_OPERATOR_NEW
+};
+POINT_CLOUD_REGISTER_POINT_STRUCT(OusterPointXYZRGBIRT,
+                                  (float, x, x)(float, y, y)(float, z, z)
+                                  (float, rgb, rgb)
+                                  (float, intensity, intensity)
+                                  (uint32_t, t, t)
+                                  (uint16_t, reflectivity, reflectivity)
+                                  (uint8_t, ring, ring)
+                                  (uint16_t, noise, noise)
+                                  (uint32_t, range, range))
 
 const int queueLength = 2000;
 
+template <typename VELODYNE_POINT_TYPE, typename OUSTER_POINT_TYPE, typename POINT_TYPE>
 class ImageProjection : public ParamServer
 {
 private:
@@ -69,8 +107,8 @@ private:
     bool firstPointFlag;
     Eigen::Affine3f transStartInverse;
 
-    pcl::PointCloud<PointXYZRGBIRT>::Ptr laserCloudIn;
-    pcl::PointCloud<OusterPointXYZIRT>::Ptr tmpOusterCloudIn;
+    typename pcl::PointCloud<VELODYNE_POINT_TYPE>::Ptr laserCloudIn;
+    typename pcl::PointCloud<OUSTER_POINT_TYPE>::Ptr tmpOusterCloudIn;
     pcl::PointCloud<PointType>::Ptr   fullCloud;
     pcl::PointCloud<PointType>::Ptr   extractedCloud;
 
@@ -109,8 +147,8 @@ public:
 
     void allocateMemory()
     {
-        laserCloudIn.reset(new pcl::PointCloud<PointXYZRGBIRT>());
-        tmpOusterCloudIn.reset(new pcl::PointCloud<OusterPointXYZIRT>());
+        laserCloudIn.reset(new pcl::PointCloud<VELODYNE_POINT_TYPE>());
+        tmpOusterCloudIn.reset(new pcl::PointCloud<OUSTER_POINT_TYPE>());
         fullCloud.reset(new pcl::PointCloud<PointType>());
         extractedCloud.reset(new pcl::PointCloud<PointType>());
 
@@ -196,6 +234,33 @@ public:
 
         resetParameters();
     }
+    
+    template <typename OUSTER_POINT_TYPE_>
+    typename std::enable_if<std::is_same<OUSTER_POINT_TYPE_, OusterPointXYZRGBIRT>::value, void>::type
+    copyTmpOusterCloudIn(int i)
+    {
+        laserCloudIn->points[i].x = tmpOusterCloudIn->points[i].x;
+        laserCloudIn->points[i].y = tmpOusterCloudIn->points[i].y;
+        laserCloudIn->points[i].z = tmpOusterCloudIn->points[i].z;
+        laserCloudIn->points[i].b = tmpOusterCloudIn->points[i].b;
+        laserCloudIn->points[i].g = tmpOusterCloudIn->points[i].g;
+        laserCloudIn->points[i].r = tmpOusterCloudIn->points[i].r;
+        laserCloudIn->points[i].intensity = tmpOusterCloudIn->points[i].intensity;
+        laserCloudIn->points[i].ring = tmpOusterCloudIn->points[i].ring;
+        laserCloudIn->points[i].time = tmpOusterCloudIn->points[i].t * 1e-9f;
+    }
+    
+    template <typename OUSTER_POINT_TYPE_>
+    typename std::enable_if<std::is_same<OUSTER_POINT_TYPE_, OusterPointXYZIRT>::value, void>::type
+    copyTmpOusterCloudIn(int i)
+    {
+        laserCloudIn->points[i].x = tmpOusterCloudIn->points[i].x;
+        laserCloudIn->points[i].y = tmpOusterCloudIn->points[i].y;
+        laserCloudIn->points[i].z = tmpOusterCloudIn->points[i].z;
+        laserCloudIn->points[i].intensity = tmpOusterCloudIn->points[i].intensity;
+        laserCloudIn->points[i].ring = tmpOusterCloudIn->points[i].ring;
+        laserCloudIn->points[i].time = tmpOusterCloudIn->points[i].t * 1e-9f;
+    }
 
     bool cachePointCloud(const sensor_msgs::PointCloud2ConstPtr& laserCloudMsg)
     {
@@ -219,14 +284,7 @@ public:
             laserCloudIn->is_dense = tmpOusterCloudIn->is_dense;
             for (size_t i = 0; i < tmpOusterCloudIn->size(); i++)
             {
-                auto &src = tmpOusterCloudIn->points[i];
-                auto &dst = laserCloudIn->points[i];
-                dst.x = src.x;
-                dst.y = src.y;
-                dst.z = src.z;
-                dst.intensity = src.intensity;
-                dst.ring = src.ring;
-                dst.time = src.t * 1e-9f;
+                copyTmpOusterCloudIn<OUSTER_POINT_TYPE>(i);
             }
         }
         else
@@ -524,6 +582,78 @@ public:
         return newPoint;
     }
 
+    template <typename POINT_TYPE_>
+    typename std::enable_if<std::is_same<POINT_TYPE_, PointType>::value, pcl::PointCloud<PointType>::Ptr>::type
+    convertPointCloud(pcl::PointCloud<PointType>::Ptr cloudIn)
+    {
+        pcl::PointCloud<PointType>::Ptr cloudOut(new pcl::PointCloud<PointType>());
+
+        int cloudSize = cloudIn->size();
+        cloudOut->resize(cloudSize);
+
+        #pragma omp parallel for num_threads(numberOfCores)
+        for (int i = 0; i < cloudSize; ++i)
+        {
+            const auto &pointFrom = cloudIn->points[i];
+            cloudOut->points[i].x = pointFrom.x;
+            cloudOut->points[i].y = pointFrom.y;
+            cloudOut->points[i].z = pointFrom.z;
+            cloudOut->points[i].b = pointFrom.b;
+            cloudOut->points[i].g = pointFrom.g;
+            cloudOut->points[i].r = pointFrom.r;
+            cloudOut->points[i].intensity = pointFrom.intensity;
+        }
+        return cloudOut;
+    }
+
+    template <typename POINT_TYPE_>
+    typename std::enable_if<std::is_same<POINT_TYPE_, pcl::PointXYZI>::value, pcl::PointCloud<pcl::PointXYZI>::Ptr>::type
+    convertPointCloud(pcl::PointCloud<PointType>::Ptr cloudIn)
+    {
+        pcl::PointCloud<pcl::PointXYZI>::Ptr cloudOut(new pcl::PointCloud<pcl::PointXYZI>());
+
+        int cloudSize = cloudIn->size();
+        cloudOut->resize(cloudSize);
+
+        #pragma omp parallel for num_threads(numberOfCores)
+        for (int i = 0; i < cloudSize; ++i)
+        {
+            const auto &pointFrom = cloudIn->points[i];
+            cloudOut->points[i].x = pointFrom.x;
+            cloudOut->points[i].y = pointFrom.y;
+            cloudOut->points[i].z = pointFrom.z;
+            cloudOut->points[i].intensity = pointFrom.intensity;
+        }
+        return cloudOut;
+    }
+
+    template <typename VELODYNE_POINT_TYPE_>
+    typename std::enable_if<std::is_same<VELODYNE_POINT_TYPE_, VelodynePointXYZRGBIRT>::value, PointType>::type
+    copyLaserCloudIn(PointType thisPoint, int i)
+    {
+        thisPoint.x = laserCloudIn->points[i].x;
+        thisPoint.y = laserCloudIn->points[i].y;
+        thisPoint.z = laserCloudIn->points[i].z;
+        thisPoint.b = laserCloudIn->points[i].b;
+        thisPoint.g = laserCloudIn->points[i].g;
+        thisPoint.r = laserCloudIn->points[i].r;
+        thisPoint.intensity = laserCloudIn->points[i].intensity;
+
+        return thisPoint;
+    }
+    
+    template <typename VELODYNE_POINT_TYPE_>
+    typename std::enable_if<std::is_same<VELODYNE_POINT_TYPE_, VelodynePointXYZIRT>::value, PointType>::type
+    copyLaserCloudIn(PointType thisPoint, int i)
+    {
+        thisPoint.x = laserCloudIn->points[i].x;
+        thisPoint.y = laserCloudIn->points[i].y;
+        thisPoint.z = laserCloudIn->points[i].z;
+        thisPoint.intensity = laserCloudIn->points[i].intensity;
+
+        return thisPoint;
+    }
+
     void projectPointCloud()
     {
         int cloudSize = laserCloudIn->points.size();
@@ -531,13 +661,7 @@ public:
         for (int i = 0; i < cloudSize; ++i)
         {
             PointType thisPoint;
-            thisPoint.x = laserCloudIn->points[i].x;
-            thisPoint.y = laserCloudIn->points[i].y;
-            thisPoint.z = laserCloudIn->points[i].z;
-            thisPoint.intensity = laserCloudIn->points[i].intensity;
-            thisPoint.b = laserCloudIn->points[i].b;
-            thisPoint.g = laserCloudIn->points[i].g;
-            thisPoint.r = laserCloudIn->points[i].r;
+            thisPoint = copyLaserCloudIn<VELODYNE_POINT_TYPE>(thisPoint, i);
 
             float range = pointDistance(thisPoint);
             if (range < lidarMinRange || range > lidarMaxRange)
@@ -609,7 +733,14 @@ public:
     void publishClouds()
     {
         cloudInfo.header = cloudHeader;
-        cloudInfo.cloud_deskewed  = publishCloud(pubExtractedCloud, extractedCloud, cloudHeader.stamp, lidarFrame);
+        typename pcl::PointCloud<POINT_TYPE>::Ptr extractedCloud_(new pcl::PointCloud<POINT_TYPE>());
+        *extractedCloud_ = *convertPointCloud<POINT_TYPE>(extractedCloud);
+        publishCloud(pubExtractedCloud, extractedCloud_, cloudHeader.stamp, lidarFrame);
+        sensor_msgs::PointCloud2 tempDeskewed;
+        pcl::toROSMsg(*extractedCloud, tempDeskewed);
+        tempDeskewed.header.stamp = cloudHeader.stamp;
+        tempDeskewed.header.frame_id = lidarFrame;
+        cloudInfo.cloud_deskewed = tempDeskewed;
         pubLaserCloudInfo.publish(cloudInfo);
     }
 };
@@ -618,12 +749,22 @@ int main(int argc, char** argv)
 {
     ros::init(argc, argv, "lio_sam");
 
-    ImageProjection IP;
-    
-    ROS_INFO("\033[1;32m----> Image Projection Started.\033[0m");
+    ParamServer PS;
 
-    ros::MultiThreadedSpinner spinner(3);
-    spinner.spin();
+    if (PS.useRGB)
+    {
+        ImageProjection<VelodynePointXYZRGBIRT, OusterPointXYZRGBIRT, PointType> IP;
+        ROS_INFO("\033[1;32m----> Image Projection Started with RGB.\033[0m");
+        ros::MultiThreadedSpinner spinner(3);
+        spinner.spin();
+    }
+    else
+    {
+        ImageProjection<VelodynePointXYZIRT, OusterPointXYZIRT, pcl::PointXYZI> IP;
+        ROS_INFO("\033[1;32m----> Image Projection Started.\033[0m");
+        ros::MultiThreadedSpinner spinner(3);
+        spinner.spin();
+    }
     
     return 0;
 }
