@@ -46,7 +46,7 @@ POINT_CLOUD_REGISTER_POINT_STRUCT (PointXYZIRPYT,
 
 typedef PointXYZIRPYT  PointTypePose;
 
-
+template <typename POINT_TYPE>
 class mapOptimization : public ParamServer
 {
 
@@ -283,6 +283,52 @@ public:
         po->intensity = pi->intensity;
     }
 
+    template <typename POINT_TYPE_>
+    typename std::enable_if<std::is_same<POINT_TYPE_, PointType>::value, pcl::PointCloud<PointType>::Ptr>::type
+    convertPointCloud(pcl::PointCloud<PointType>::Ptr cloudIn)
+    {
+        pcl::PointCloud<PointType>::Ptr cloudOut(new pcl::PointCloud<PointType>());
+
+        int cloudSize = cloudIn->size();
+        cloudOut->resize(cloudSize);
+
+        #pragma omp parallel for num_threads(numberOfCores)
+        for (int i = 0; i < cloudSize; ++i)
+        {
+            const auto &pointFrom = cloudIn->points[i];
+            cloudOut->points[i].x = pointFrom.x;
+            cloudOut->points[i].y = pointFrom.y;
+            cloudOut->points[i].z = pointFrom.z;
+            cloudOut->points[i].b = pointFrom.b;
+            cloudOut->points[i].g = pointFrom.g;
+            cloudOut->points[i].r = pointFrom.r;
+            cloudOut->points[i].intensity = pointFrom.intensity;
+        }
+        return cloudOut;
+    }
+
+    template <typename POINT_TYPE_>
+    typename std::enable_if<std::is_same<POINT_TYPE_, pcl::PointXYZI>::value, pcl::PointCloud<pcl::PointXYZI>::Ptr>::type
+    convertPointCloud(pcl::PointCloud<PointType>::Ptr cloudIn)
+    {
+        pcl::PointCloud<pcl::PointXYZI>::Ptr cloudOut(new pcl::PointCloud<pcl::PointXYZI>());
+
+        int cloudSize = cloudIn->size();
+        cloudOut->resize(cloudSize);
+
+        #pragma omp parallel for num_threads(numberOfCores)
+        for (int i = 0; i < cloudSize; ++i)
+        {
+            const auto &pointFrom = cloudIn->points[i];
+            cloudOut->points[i].x = pointFrom.x;
+            cloudOut->points[i].y = pointFrom.y;
+            cloudOut->points[i].z = pointFrom.z;
+            cloudOut->points[i].intensity = pointFrom.intensity;
+        }
+        return cloudOut;
+    }
+
+
     pcl::PointCloud<PointType>::Ptr transformPointCloud(pcl::PointCloud<PointType>::Ptr cloudIn, PointTypePose* transformIn)
     {
         pcl::PointCloud<PointType>::Ptr cloudOut(new pcl::PointCloud<PointType>());
@@ -368,7 +414,9 @@ public:
       int unused = system((std::string("exec rm -r ") + saveMapDirectory).c_str());
       unused = system((std::string("mkdir -p ") + saveMapDirectory).c_str());
       // save key frame transformations
-      pcl::io::savePCDFileBinary(saveMapDirectory + "/trajectory.pcd", *cloudKeyPoses3D);
+      typename pcl::PointCloud<POINT_TYPE>::Ptr cloudKeyPoses3D_(new pcl::PointCloud<POINT_TYPE>());
+      *cloudKeyPoses3D_ = *convertPointCloud<POINT_TYPE>(cloudKeyPoses3D);
+      pcl::io::savePCDFileBinary(saveMapDirectory + "/trajectory.pcd", *cloudKeyPoses3D_);
       pcl::io::savePCDFileBinary(saveMapDirectory + "/transformations.pcd", *cloudKeyPoses6D);
       // extract global point cloud map
       pcl::PointCloud<PointType>::Ptr globalCornerCloud(new pcl::PointCloud<PointType>());
@@ -390,26 +438,36 @@ public:
         downSizeFilterCorner.setInputCloud(globalCornerCloud);
         downSizeFilterCorner.setLeafSize(req.resolution, req.resolution, req.resolution);
         downSizeFilterCorner.filter(*globalCornerCloudDS);
-        pcl::io::savePCDFileBinary(saveMapDirectory + "/CornerMap.pcd", *globalCornerCloudDS);
+        typename pcl::PointCloud<POINT_TYPE>::Ptr globalCornerCloudDS_(new pcl::PointCloud<POINT_TYPE>());
+        *globalCornerCloudDS_ = *convertPointCloud<POINT_TYPE>(globalCornerCloudDS);
+        pcl::io::savePCDFileBinary(saveMapDirectory + "/CornerMap.pcd", *globalCornerCloudDS_);
         // down-sample and save surf cloud
         downSizeFilterSurf.setInputCloud(globalSurfCloud);
         downSizeFilterSurf.setLeafSize(req.resolution, req.resolution, req.resolution);
         downSizeFilterSurf.filter(*globalSurfCloudDS);
-        pcl::io::savePCDFileBinary(saveMapDirectory + "/SurfMap.pcd", *globalSurfCloudDS);
+        typename pcl::PointCloud<POINT_TYPE>::Ptr globalSurfCloudDS_(new pcl::PointCloud<POINT_TYPE>());
+        *globalSurfCloudDS_ = *convertPointCloud<POINT_TYPE>(globalSurfCloudDS);
+        pcl::io::savePCDFileBinary(saveMapDirectory + "/SurfMap.pcd", *globalSurfCloudDS_);
       }
       else
       {
         // save corner cloud
-        pcl::io::savePCDFileBinary(saveMapDirectory + "/CornerMap.pcd", *globalCornerCloud);
+        typename pcl::PointCloud<POINT_TYPE>::Ptr globalCornerCloud_(new pcl::PointCloud<POINT_TYPE>());
+        *globalCornerCloud_ = *convertPointCloud<POINT_TYPE>(globalCornerCloud);
+        pcl::io::savePCDFileBinary(saveMapDirectory + "/CornerMap.pcd", *globalCornerCloud_);
         // save surf cloud
-        pcl::io::savePCDFileBinary(saveMapDirectory + "/SurfMap.pcd", *globalSurfCloud);
+        typename pcl::PointCloud<POINT_TYPE>::Ptr globalSurfCloud_(new pcl::PointCloud<POINT_TYPE>());
+        *globalSurfCloud_ = *convertPointCloud<POINT_TYPE>(globalSurfCloud);
+        pcl::io::savePCDFileBinary(saveMapDirectory + "/SurfMap.pcd", *globalSurfCloud_);
       }
 
       // save global point cloud map
       *globalMapCloud += *globalCornerCloud;
       *globalMapCloud += *globalSurfCloud;
 
-      int ret = pcl::io::savePCDFileBinary(saveMapDirectory + "/GlobalMap.pcd", *globalMapCloud);
+      typename pcl::PointCloud<POINT_TYPE>::Ptr globalMapCloud_(new pcl::PointCloud<POINT_TYPE>());
+      *globalMapCloud_ = *convertPointCloud<POINT_TYPE>(globalMapCloud);
+      int ret = pcl::io::savePCDFileBinary(saveMapDirectory + "/GlobalMap.pcd", *globalMapCloud_);
       res.success = ret == 0;
 
       downSizeFilterCorner.setLeafSize(mappingCornerLeafSize, mappingCornerLeafSize, mappingCornerLeafSize);
@@ -489,7 +547,9 @@ public:
         downSizeFilterGlobalMapKeyFrames.setLeafSize(globalMapVisualizationLeafSize, globalMapVisualizationLeafSize, globalMapVisualizationLeafSize); // for global map visualization
         downSizeFilterGlobalMapKeyFrames.setInputCloud(globalMapKeyFrames);
         downSizeFilterGlobalMapKeyFrames.filter(*globalMapKeyFramesDS);
-        publishCloud(pubLaserCloudSurround, globalMapKeyFramesDS, timeLaserInfoStamp, odometryFrame);
+        typename pcl::PointCloud<POINT_TYPE>::Ptr globalMapKeyFramesDS_(new pcl::PointCloud<POINT_TYPE>());
+        *globalMapKeyFramesDS_ = *convertPointCloud<POINT_TYPE>(globalMapKeyFramesDS);
+        publishCloud(pubLaserCloudSurround, globalMapKeyFramesDS_, timeLaserInfoStamp, odometryFrame);
     }
 
 
@@ -549,13 +609,15 @@ public:
         // extract cloud
         pcl::PointCloud<PointType>::Ptr cureKeyframeCloud(new pcl::PointCloud<PointType>());
         pcl::PointCloud<PointType>::Ptr prevKeyframeCloud(new pcl::PointCloud<PointType>());
+        typename pcl::PointCloud<POINT_TYPE>::Ptr prevKeyframeCloud_(new pcl::PointCloud<POINT_TYPE>());
         {
             loopFindNearKeyframes(cureKeyframeCloud, loopKeyCur, 0);
             loopFindNearKeyframes(prevKeyframeCloud, loopKeyPre, historyKeyframeSearchNum);
             if (cureKeyframeCloud->size() < 300 || prevKeyframeCloud->size() < 1000)
                 return;
             if (pubHistoryKeyFrames.getNumSubscribers() != 0)
-                publishCloud(pubHistoryKeyFrames, prevKeyframeCloud, timeLaserInfoStamp, odometryFrame);
+                *prevKeyframeCloud_ = *convertPointCloud<POINT_TYPE>(prevKeyframeCloud);
+                publishCloud(pubHistoryKeyFrames, prevKeyframeCloud_, timeLaserInfoStamp, odometryFrame);
         }
 
         // ICP Settings
@@ -580,7 +642,9 @@ public:
         {
             pcl::PointCloud<PointType>::Ptr closed_cloud(new pcl::PointCloud<PointType>());
             pcl::transformPointCloud(*cureKeyframeCloud, *closed_cloud, icp.getFinalTransformation());
-            publishCloud(pubIcpKeyFrames, closed_cloud, timeLaserInfoStamp, odometryFrame);
+            typename pcl::PointCloud<POINT_TYPE>::Ptr closed_cloud_(new pcl::PointCloud<POINT_TYPE>());
+            *closed_cloud_ = *convertPointCloud<POINT_TYPE>(closed_cloud);
+            publishCloud(pubIcpKeyFrames, closed_cloud_, timeLaserInfoStamp, odometryFrame);
         }
 
         // Get pose transformation
@@ -1709,9 +1773,13 @@ public:
         if (cloudKeyPoses3D->points.empty())
             return;
         // publish key poses
-        publishCloud(pubKeyPoses, cloudKeyPoses3D, timeLaserInfoStamp, odometryFrame);
+        typename pcl::PointCloud<POINT_TYPE>::Ptr cloudKeyPoses3D_(new pcl::PointCloud<POINT_TYPE>());
+        *cloudKeyPoses3D_ = *convertPointCloud<POINT_TYPE>(cloudKeyPoses3D);
+        publishCloud(pubKeyPoses, cloudKeyPoses3D_, timeLaserInfoStamp, odometryFrame);
         // Publish surrounding key frames
-        publishCloud(pubRecentKeyFrames, laserCloudSurfFromMapDS, timeLaserInfoStamp, odometryFrame);
+        typename pcl::PointCloud<POINT_TYPE>::Ptr laserCloudSurfFromMapDS_(new pcl::PointCloud<POINT_TYPE>());
+        *laserCloudSurfFromMapDS_ = *convertPointCloud<POINT_TYPE>(laserCloudSurfFromMapDS);
+        publishCloud(pubRecentKeyFrames, laserCloudSurfFromMapDS_, timeLaserInfoStamp, odometryFrame);
         // publish registered key frame
         if (pubRecentKeyFrame.getNumSubscribers() != 0)
         {
@@ -1719,7 +1787,9 @@ public:
             PointTypePose thisPose6D = trans2PointTypePose(transformTobeMapped);
             *cloudOut += *transformPointCloud(laserCloudCornerLastDS,  &thisPose6D);
             *cloudOut += *transformPointCloud(laserCloudSurfLastDS,    &thisPose6D);
-            publishCloud(pubRecentKeyFrame, cloudOut, timeLaserInfoStamp, odometryFrame);
+            typename pcl::PointCloud<POINT_TYPE>::Ptr cloudOut_(new pcl::PointCloud<POINT_TYPE>());
+            *cloudOut_ = *convertPointCloud<POINT_TYPE>(cloudOut);
+            publishCloud(pubRecentKeyFrame, cloudOut_, timeLaserInfoStamp, odometryFrame);
         }
         // publish registered high-res raw cloud
         if (pubCloudRegisteredRaw.getNumSubscribers() != 0)
@@ -1728,7 +1798,9 @@ public:
             pcl::fromROSMsg(cloudInfo.cloud_deskewed, *cloudOut);
             PointTypePose thisPose6D = trans2PointTypePose(transformTobeMapped);
             *cloudOut = *transformPointCloud(cloudOut,  &thisPose6D);
-            publishCloud(pubCloudRegisteredRaw, cloudOut, timeLaserInfoStamp, odometryFrame);
+            typename pcl::PointCloud<POINT_TYPE>::Ptr cloudOut_(new pcl::PointCloud<POINT_TYPE>());
+            *cloudOut_ = *convertPointCloud<POINT_TYPE>(cloudOut);
+            publishCloud(pubCloudRegisteredRaw, cloudOut_, timeLaserInfoStamp, odometryFrame);
         }
         // publish path
         if (pubPath.getNumSubscribers() != 0)
@@ -1748,12 +1820,16 @@ public:
                 pcl::PointCloud<PointType>::Ptr cloudOut(new pcl::PointCloud<PointType>());
                 *cloudOut += *laserCloudCornerLastDS;
                 *cloudOut += *laserCloudSurfLastDS;
-                slamInfo.key_frame_cloud = publishCloud(ros::Publisher(), cloudOut, timeLaserInfoStamp, lidarFrame);
+                typename pcl::PointCloud<POINT_TYPE>::Ptr cloudOut_(new pcl::PointCloud<POINT_TYPE>());
+                *cloudOut_ = *convertPointCloud<POINT_TYPE>(cloudOut);
+                slamInfo.key_frame_cloud = publishCloud(ros::Publisher(), cloudOut_, timeLaserInfoStamp, lidarFrame);
                 slamInfo.key_frame_poses = publishCloud(ros::Publisher(), cloudKeyPoses6D, timeLaserInfoStamp, odometryFrame);
                 pcl::PointCloud<PointType>::Ptr localMapOut(new pcl::PointCloud<PointType>());
                 *localMapOut += *laserCloudCornerFromMapDS;
                 *localMapOut += *laserCloudSurfFromMapDS;
-                slamInfo.key_frame_map = publishCloud(ros::Publisher(), localMapOut, timeLaserInfoStamp, odometryFrame);
+                typename pcl::PointCloud<POINT_TYPE>::Ptr localMapOut_(new pcl::PointCloud<POINT_TYPE>());
+                *localMapOut_ = *convertPointCloud<POINT_TYPE>(localMapOut);
+                slamInfo.key_frame_map = publishCloud(ros::Publisher(), localMapOut_, timeLaserInfoStamp, odometryFrame);
                 pubSLAMInfo.publish(slamInfo);
                 lastSLAMInfoPubSize = cloudKeyPoses6D->size();
             }
@@ -1766,17 +1842,28 @@ int main(int argc, char** argv)
 {
     ros::init(argc, argv, "lio_sam");
 
-    mapOptimization MO;
+    ParamServer PS;
 
-    ROS_INFO("\033[1;32m----> Map Optimization Started.\033[0m");
-    
-    std::thread loopthread(&mapOptimization::loopClosureThread, &MO);
-    std::thread visualizeMapThread(&mapOptimization::visualizeGlobalMapThread, &MO);
-
-    ros::spin();
-
-    loopthread.join();
-    visualizeMapThread.join();
+    if (PS.useRGB)
+    {
+        mapOptimization<PointType> MO;
+        ROS_INFO("\033[1;32m----> Map Optimization Started with RGB.\033[0m");
+        std::thread loopthread(&mapOptimization<PointType>::loopClosureThread, &MO);
+        std::thread visualizeMapThread(&mapOptimization<PointType>::visualizeGlobalMapThread, &MO);
+        ros::spin();
+        loopthread.join();
+        visualizeMapThread.join();
+    }
+    else
+    {
+        mapOptimization<pcl::PointXYZI> MO;
+        ROS_INFO("\033[1;32m----> Map Optimization Started.\033[0m");
+        std::thread loopthread(&mapOptimization<pcl::PointXYZI>::loopClosureThread, &MO);
+        std::thread visualizeMapThread(&mapOptimization<pcl::PointXYZI>::visualizeGlobalMapThread, &MO);
+        ros::spin();
+        loopthread.join();
+        visualizeMapThread.join();
+    }
 
     return 0;
 }
