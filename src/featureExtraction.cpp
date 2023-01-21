@@ -12,6 +12,7 @@ struct by_value{
     }
 };
 
+template <typename POINT_TYPE>
 class FeatureExtraction : public ParamServer
 {
 
@@ -76,6 +77,51 @@ public:
         extractFeatures();
 
         publishFeatureCloud();
+    }
+
+    template <typename POINT_TYPE_>
+    typename std::enable_if<std::is_same<POINT_TYPE_, PointType>::value, pcl::PointCloud<PointType>::Ptr>::type
+    convertPointCloud(pcl::PointCloud<PointType>::Ptr cloudIn)
+    {
+        pcl::PointCloud<PointType>::Ptr cloudOut(new pcl::PointCloud<PointType>());
+
+        int cloudSize = cloudIn->size();
+        cloudOut->resize(cloudSize);
+
+        #pragma omp parallel for num_threads(numberOfCores)
+        for (int i = 0; i < cloudSize; ++i)
+        {
+            const auto &pointFrom = cloudIn->points[i];
+            cloudOut->points[i].x = pointFrom.x;
+            cloudOut->points[i].y = pointFrom.y;
+            cloudOut->points[i].z = pointFrom.z;
+            cloudOut->points[i].b = pointFrom.b;
+            cloudOut->points[i].g = pointFrom.g;
+            cloudOut->points[i].r = pointFrom.r;
+            cloudOut->points[i].intensity = pointFrom.intensity;
+        }
+        return cloudOut;
+    }
+
+    template <typename POINT_TYPE_>
+    typename std::enable_if<std::is_same<POINT_TYPE_, pcl::PointXYZI>::value, pcl::PointCloud<pcl::PointXYZI>::Ptr>::type
+    convertPointCloud(pcl::PointCloud<PointType>::Ptr cloudIn)
+    {
+        pcl::PointCloud<pcl::PointXYZI>::Ptr cloudOut(new pcl::PointCloud<pcl::PointXYZI>());
+
+        int cloudSize = cloudIn->size();
+        cloudOut->resize(cloudSize);
+
+        #pragma omp parallel for num_threads(numberOfCores)
+        for (int i = 0; i < cloudSize; ++i)
+        {
+            const auto &pointFrom = cloudIn->points[i];
+            cloudOut->points[i].x = pointFrom.x;
+            cloudOut->points[i].y = pointFrom.y;
+            cloudOut->points[i].z = pointFrom.z;
+            cloudOut->points[i].intensity = pointFrom.intensity;
+        }
+        return cloudOut;
     }
 
     void calculateSmoothness()
@@ -250,9 +296,23 @@ public:
         // free cloud info memory
         freeCloudInfoMemory();
         // save newly extracted features
-        cloudInfo.cloud_corner  = publishCloud(pubCornerPoints,  cornerCloud,  cloudHeader.stamp, lidarFrame);
-        cloudInfo.cloud_surface = publishCloud(pubSurfacePoints, surfaceCloud, cloudHeader.stamp, lidarFrame);
+        typename pcl::PointCloud<POINT_TYPE>::Ptr cornerCloud_(new pcl::PointCloud<POINT_TYPE>());
+        *cornerCloud_ = *convertPointCloud<POINT_TYPE>(cornerCloud);
+        typename pcl::PointCloud<POINT_TYPE>::Ptr surfaceCloud_(new pcl::PointCloud<POINT_TYPE>());
+        *surfaceCloud_ = *convertPointCloud<POINT_TYPE>(surfaceCloud);
+        publishCloud(pubCornerPoints,  cornerCloud_,  cloudHeader.stamp, lidarFrame);
+        publishCloud(pubSurfacePoints, surfaceCloud_, cloudHeader.stamp, lidarFrame);
         // publish to mapOptimization
+        sensor_msgs::PointCloud2 tempCorner;
+        sensor_msgs::PointCloud2 tempSurface;
+        pcl::toROSMsg(*cornerCloud, tempCorner);
+        pcl::toROSMsg(*surfaceCloud, tempSurface);
+        tempCorner.header.stamp = cloudHeader.stamp;
+        tempSurface.header.stamp = cloudHeader.stamp;
+        tempCorner.header.frame_id = lidarFrame;
+        tempSurface.header.frame_id = lidarFrame;
+        cloudInfo.cloud_corner = tempCorner;
+        cloudInfo.cloud_surface = tempSurface;
         pubLaserCloudInfo.publish(cloudInfo);
     }
 };
@@ -262,11 +322,20 @@ int main(int argc, char** argv)
 {
     ros::init(argc, argv, "lio_sam");
 
-    FeatureExtraction FE;
+    ParamServer PS;
 
-    ROS_INFO("\033[1;32m----> Feature Extraction Started.\033[0m");
-   
-    ros::spin();
+    if (PS.useRGB)
+    {
+        FeatureExtraction<PointType> FE;
+        ROS_INFO("\033[1;32m----> Feature Extraction Started with RGB.\033[0m");
+        ros::spin();
+    }
+    else
+    {
+        FeatureExtraction<pcl::PointXYZI> FE;
+        ROS_INFO("\033[1;32m----> Feature Extraction Started.\033[0m");
+        ros::spin();
+    }
 
     return 0;
 }
