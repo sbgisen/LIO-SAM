@@ -1,8 +1,12 @@
 <launch>
 
     <arg name="project" default="lio_sam"/>
+    <arg name="use_rgb" default="false"/>
+
+    <arg if="$(arg use_rgb)" name="config_file_path" value="-d $(find lio_sam)/launch/include/config/colorize_rviz.rviz"/>
+    <arg unless="$(arg use_rgb)" name="config_file_path" value="-d $(find lio_sam)/launch/include/config/rviz.rviz"/>
 
     <!--- Run Rviz-->
-    <node pkg="rviz" type="rviz" name="$(arg project)_rviz" args="-d $(find lio_sam)/launch/include/config/rviz.rviz" />
+    <node pkg="rviz" type="rviz" name="$(arg project)_rviz" args="$(arg config_file_path)" />
 
 </launch>

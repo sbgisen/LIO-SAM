@@ -1,9 +1,11 @@
 <launch>
 
     <arg name="project" default="lio_sam"/>
+    <arg name="use_rgb" default="false"/>
     
     <!-- Parameters -->
     <rosparam file="$(find lio_sam)/config/params.yaml" command="load" />
+    <param name="/lio_sam/useRGB" value="$(arg use_rgb)"/>
 
     <!--- LOAM -->
     <include file="$(find lio_sam)/launch/include/module_loam.launch" />
@@ -15,6 +17,8 @@
     <include file="$(find lio_sam)/launch/include/module_navsat.launch" />
 
     <!--- Run Rviz-->
-    <include file="$(find lio_sam)/launch/include/module_rviz.launch" />
+    <include file="$(find lio_sam)/launch/include/module_rviz.launch" >
+        <arg name="use_rgb" value="$(arg use_rgb)"/>
+    </include>
 
 </launch>
