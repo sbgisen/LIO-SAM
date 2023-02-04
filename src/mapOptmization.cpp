@@ -1631,9 +1631,11 @@ public:
         if (savePCD == true)
         {
             pcl::PointCloud<PointType>::Ptr thisKeyFrameCloud(new pcl::PointCloud<PointType>());
+            std::ostringstream indexStr;
+            indexStr << std::internal << std::setfill('0') << std::setw(6) << currentKeyFrameIndex++;
             *thisKeyFrameCloud += *thisCornerKeyFrame;
             *thisKeyFrameCloud += *thisSurfKeyFrame;
-            pcl::io::savePCDFileBinary(saveKeyFrameMapDirectory + std::to_string(currentKeyFrameIndex++) + ".pcd", *thisKeyFrameCloud);
+            pcl::io::savePCDFileBinary(saveKeyFrameMapDirectory + indexStr.str() + ".pcd", *thisKeyFrameCloud);
         }
 
         // save path for visualization
