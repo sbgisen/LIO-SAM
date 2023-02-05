@@ -397,7 +397,7 @@ public:
         else saveMapDirectory = std::getenv("HOME") + req.destination;
         cout << "Save destination: " << saveMapDirectory << endl;
         // create directory and remove old files;
-        if (savePCD == false)
+        if (!saveKeyframePose == true)
         {
             int unused = system((std::string("exec rm -r ") + saveMapDirectory).c_str());
             unused = system((std::string("mkdir -p ") + saveMapDirectory).c_str());
