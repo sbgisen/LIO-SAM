@@ -198,7 +198,7 @@ public:
 
         // create directory and remove old files
         saveKeyFrameMapDirectory = std::getenv("HOME") + savePCDDirectory + "KeyFramePCDs/";
-        if (savePCD == true)
+        if (saveKeyframePose == true)
         {
             saveMapDirectory = std::getenv("HOME") + savePCDDirectory;
             int unused = system((std::string("exec rm -r ") + saveMapDirectory).c_str());
@@ -464,19 +464,22 @@ public:
             publishGlobalMap();
         }
 
+        // save pose graph (runs when programe is closing)
+        if (saveKeyframePose == true)
+        {
+            cout << "****************************************************" << endl;
+            cout << "Saving the posegraph ..." << endl;
+            const std::string kitti_format_pg_filename{ std::getenv("HOME") + savePCDDirectory + "optimized_poses.txt" };
+            saveOptimizedVerticesKITTIformat(isamCurrentEstimate, kitti_format_pg_filename);
+            cout << "****************************************************" << endl;
+            cout << "Saving the posegraph completed\n" << endl;
+        }
+
         if (savePCD == false)
             return;
 
         lio_sam::save_mapRequest  req;
         lio_sam::save_mapResponse res;
-
-        // save pose graph (runs when programe is closing)
-        cout << "****************************************************" << endl;
-        cout << "Saving the posegraph ..." << endl;
-        const std::string kitti_format_pg_filename{ std::getenv("HOME") + savePCDDirectory + "optimized_poses.txt" };
-        saveOptimizedVerticesKITTIformat(isamCurrentEstimate, kitti_format_pg_filename);
-        cout << "****************************************************" << endl;
-        cout << "Saving the posegraph completed\n" << endl;
 
         if(!saveMapService(req, res)){
             cout << "Fail to save map" << endl;
@@ -1623,7 +1626,7 @@ public:
         surfCloudKeyFrames.push_back(thisSurfKeyFrame);
 
         // save keyframe cloud as file
-        if (savePCD == true)
+        if (saveKeyframePose == true)
         {
             pcl::PointCloud<PointType>::Ptr thisKeyFrameCloud(new pcl::PointCloud<PointType>());
             std::ostringstream indexStr;

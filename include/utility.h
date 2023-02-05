@@ -88,6 +88,7 @@ public:
 
     // Save pcd
     bool savePCD;
+    bool saveKeyframePose;
     string savePCDDirectory;
 
     // Lidar Sensor Configuration
@@ -171,6 +172,7 @@ public:
         nh.param<float>("lio_sam/poseCovThreshold", poseCovThreshold, 25.0);
 
         nh.param<bool>("lio_sam/savePCD", savePCD, false);
+        nh.param<bool>("lio_sam/saveKeyframePose", saveKeyframePose, false);
         nh.param<std::string>("lio_sam/savePCDDirectory", savePCDDirectory, "/Downloads/LOAM/");
 
         std::string sensorStr;
