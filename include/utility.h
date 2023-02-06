@@ -56,7 +56,19 @@
 
 using namespace std;
 
-typedef pcl::PointXYZI PointType;
+struct EIGEN_ALIGN16 PointXYZRGBI
+{
+    PCL_ADD_POINT4D
+    PCL_ADD_RGB;
+    PCL_ADD_INTENSITY;
+    EIGEN_MAKE_ALIGNED_OPERATOR_NEW
+};
+POINT_CLOUD_REGISTER_POINT_STRUCT(PointXYZRGBI, 
+                                  (float, x, x)(float, y, y)(float, z, z)
+                                  (float, rgb, rgb)
+                                  (float, intensity, intensity))
+
+typedef PointXYZRGBI PointType;
 
 enum class SensorType { VELODYNE, OUSTER, LIVOX };
 
@@ -150,6 +162,9 @@ public:
     float globalMapVisualizationSearchRadius;
     float globalMapVisualizationPoseDensity;
     float globalMapVisualizationLeafSize;
+
+    // colorize feature
+    bool useRGB;
 
     ParamServer()
     {
@@ -245,6 +260,8 @@ public:
         nh.param<float>("lio_sam/globalMapVisualizationSearchRadius", globalMapVisualizationSearchRadius, 1e3);
         nh.param<float>("lio_sam/globalMapVisualizationPoseDensity", globalMapVisualizationPoseDensity, 10.0);
         nh.param<float>("lio_sam/globalMapVisualizationLeafSize", globalMapVisualizationLeafSize, 1.0);
+
+        nh.param<bool>("lio_sam/useRGB", useRGB, false);
 
         usleep(100);
     }
