@@ -197,7 +197,7 @@ public:
 
         // create directory and remove old files
         saveKeyFrameMapDirectory = std::getenv("HOME") + savePCDDirectory + "KeyFramePCDs/";
-        if (saveKeyframePose == true)
+        if (saveKeyframePose)
         {
             saveMapDirectory = std::getenv("HOME") + savePCDDirectory;
             int unused = system((std::string("exec rm -r ") + saveMapDirectory).c_str());
@@ -527,7 +527,7 @@ public:
         }
 
         // save pose graph (runs when programe is closing)
-        if (saveKeyframePose == true)
+        if (saveKeyframePose)
         {
             cout << "****************************************************" << endl;
             cout << "Saving the posegraph ..." << endl;
