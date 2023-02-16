@@ -447,7 +447,7 @@ public:
       else saveMapDirectory = std::getenv("HOME") + req.destination;
       cout << "Save destination: " << saveMapDirectory << endl;
       // create directory and remove old files;
-      if(!saveKeyframePose == true)
+      if(!saveKeyframePose)
       {
         int unused = system((std::string("exec rm -r ") + saveMapDirectory).c_str());
         unused = system((std::string("mkdir -p ") + saveMapDirectory).c_str());
@@ -1694,7 +1694,7 @@ public:
         surfCloudKeyFrames.push_back(thisSurfKeyFrame);
 
         // save keyframe cloud as file
-        if (saveKeyframePose == true)
+        if (saveKeyframePose)
         {
             typename pcl::PointCloud<POINT_TYPE>::Ptr thisSurfKeyFrame_(new pcl::PointCloud<POINT_TYPE>());
             typename pcl::PointCloud<POINT_TYPE>::Ptr thisCornerKeyFrame_(new pcl::PointCloud<POINT_TYPE>());
