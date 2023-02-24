@@ -196,7 +196,7 @@ public:
         allocateMemory();
 
         // create directory and remove old files
-        saveKeyFrameMapDirectory = std::getenv("HOME") + savePCDDirectory + "KeyFramePCDs/";
+        saveKeyFrameMapDirectory = std::getenv("HOME") + savePCDDirectory + "pcds/";
         if (saveKeyframePose)
         {
             saveMapDirectory = std::getenv("HOME") + savePCDDirectory;
@@ -531,7 +531,7 @@ public:
         {
             cout << "****************************************************" << endl;
             cout << "Saving the posegraph ..." << endl;
-            const std::string kitti_format_pg_filename{ std::getenv("HOME") + savePCDDirectory + "optimized_poses.txt" };
+            const std::string kitti_format_pg_filename{ std::getenv("HOME") + savePCDDirectory + "poses_lidar2body.csv" };
             saveOptimizedVerticesKITTIformat(isamCurrentEstimate, kitti_format_pg_filename);
             cout << "****************************************************" << endl;
             cout << "Saving the posegraph completed\n" << endl;
