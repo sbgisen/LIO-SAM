@@ -137,8 +137,8 @@ public:
     float mappingCornerLeafSize;
     float mappingSurfLeafSize ;
 
-    float z_tollerance; 
-    float rotation_tollerance;
+    float z_tolerance; 
+    float rotation_tolerance;
 
     // CPU Params
     int numberOfCores;
@@ -240,8 +240,8 @@ public:
         nh.param<float>("lio_sam/mappingCornerLeafSize", mappingCornerLeafSize, 0.2);
         nh.param<float>("lio_sam/mappingSurfLeafSize", mappingSurfLeafSize, 0.2);
 
-        nh.param<float>("lio_sam/z_tollerance", z_tollerance, FLT_MAX);
-        nh.param<float>("lio_sam/rotation_tollerance", rotation_tollerance, FLT_MAX);
+        nh.param<float>("lio_sam/z_tolerance", z_tolerance, FLT_MAX);
+        nh.param<float>("lio_sam/rotation_tolerance", rotation_tolerance, FLT_MAX);
 
         nh.param<int>("lio_sam/numberOfCores", numberOfCores, 2);
         nh.param<double>("lio_sam/mappingProcessInterval", mappingProcessInterval, 0.15);
