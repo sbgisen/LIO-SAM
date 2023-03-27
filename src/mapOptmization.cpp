@@ -1451,9 +1451,9 @@ public:
             }
         }
 
-        transformTobeMapped[0] = constraintTransformation(transformTobeMapped[0], rotation_tollerance);
-        transformTobeMapped[1] = constraintTransformation(transformTobeMapped[1], rotation_tollerance);
-        transformTobeMapped[5] = constraintTransformation(transformTobeMapped[5], z_tollerance);
+        transformTobeMapped[0] = constraintTransformation(transformTobeMapped[0], rotation_tolerance);
+        transformTobeMapped[1] = constraintTransformation(transformTobeMapped[1], rotation_tolerance);
+        transformTobeMapped[5] = constraintTransformation(transformTobeMapped[5], z_tolerance);
 
         incrementalOdometryAffineBack = trans2Affine3f(transformTobeMapped);
     }
