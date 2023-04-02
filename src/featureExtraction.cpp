@@ -276,10 +276,16 @@ public:
             }
 
             surfaceCloudScanDS->clear();
-            downSizeFilter.setInputCloud(surfaceCloudScan);
-            downSizeFilter.filter(*surfaceCloudScanDS);
-
-            *surfaceCloud += *surfaceCloudScanDS;
+            if (useMappingVoxelFilter)
+            {
+                downSizeFilter.setInputCloud(surfaceCloudScan);
+                downSizeFilter.filter(*surfaceCloudScanDS);
+                *surfaceCloud += *surfaceCloudScanDS;
+            }
+            else
+            {
+                *surfaceCloud += *surfaceCloudScan;
+            }
         }
     }
 
