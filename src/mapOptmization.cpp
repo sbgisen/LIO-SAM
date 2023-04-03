@@ -139,8 +139,8 @@ public:
 
     int laserCloudCornerFromMapDSNum = 0;
     int laserCloudSurfFromMapDSNum = 0;
-    int laserCloudCornerLastNum = 0;
-    int laserCloudSurfLastNum = 0;
+    int laserCloudCornerLastDSNum = 0;
+    int laserCloudSurfLastDSNum = 0;
 
     int currentKeyFrameIndex = 0;
 
@@ -1076,31 +1076,29 @@ public:
     void downsampleCurrentScan()
     {
         // Downsample cloud from current scan
+        laserCloudCornerLastDS->clear();
+        laserCloudCornerLast->clear();
+        downSizeFilterCorner.setInputCloud(extractedCornerCloud);
+        downSizeFilterCorner.filter(*laserCloudCornerLastDS);
+
+        laserCloudSurfLastDS->clear();
+        laserCloudSurfLast->clear();
+        downSizeFilterSurf.setInputCloud(extractedSurfCloud);
+        downSizeFilterSurf.filter(*laserCloudSurfLastDS);
+
         if (useMappingVoxelFilter)
         {
-            laserCloudCornerLastDS->clear();
-            laserCloudCornerLast->clear();
-            downSizeFilterCorner.setInputCloud(extractedCornerCloud);
-            downSizeFilterCorner.filter(*laserCloudCornerLastDS);
             *laserCloudCornerLast = *laserCloudCornerLastDS;
-
-            laserCloudSurfLastDS->clear();
-            laserCloudSurfLast->clear();
-            downSizeFilterSurf.setInputCloud(extractedSurfCloud);
-            downSizeFilterSurf.filter(*laserCloudSurfLastDS);
             *laserCloudSurfLast = *laserCloudSurfLastDS;
         }
         else
         {
-            laserCloudCornerLast->clear();
             *laserCloudCornerLast = *extractedCornerCloud;
-
-            laserCloudSurfLast->clear();
             *laserCloudSurfLast = *extractedSurfCloud;
         }
 
-        laserCloudCornerLastNum = laserCloudCornerLast->size();
-        laserCloudSurfLastNum = laserCloudSurfLast->size();
+        laserCloudCornerLastDSNum = laserCloudCornerLastDS->size();
+        laserCloudSurfLastDSNum = laserCloudSurfLastDS->size();
     }
 
     void updatePointAssociateToMap()
@@ -1113,13 +1111,13 @@ public:
         updatePointAssociateToMap();
 
         #pragma omp parallel for num_threads(numberOfCores)
-        for (int i = 0; i < laserCloudCornerLastNum; i++)
+        for (int i = 0; i < laserCloudCornerLastDSNum; i++)
         {
             PointType pointOri, pointSel, coeff;
             std::vector<int> pointSearchInd;
             std::vector<float> pointSearchSqDis;
 
-            pointOri = laserCloudCornerLast->points[i];
+            pointOri = laserCloudCornerLastDS->points[i];
             pointAssociateToMap(&pointOri, &pointSel);
             kdtreeCornerFromMap->nearestKSearch(pointSel, 5, pointSearchInd, pointSearchSqDis);
 
@@ -1205,13 +1203,13 @@ public:
         updatePointAssociateToMap();
 
         #pragma omp parallel for num_threads(numberOfCores)
-        for (int i = 0; i < laserCloudSurfLastNum; i++)
+        for (int i = 0; i < laserCloudSurfLastDSNum; i++)
         {
             PointType pointOri, pointSel, coeff;
             std::vector<int> pointSearchInd;
             std::vector<float> pointSearchSqDis;
 
-            pointOri = laserCloudSurfLast->points[i];
+            pointOri = laserCloudSurfLastDS->points[i];
             pointAssociateToMap(&pointOri, &pointSel); 
             kdtreeSurfFromMap->nearestKSearch(pointSel, 5, pointSearchInd, pointSearchSqDis);
 
@@ -1274,14 +1272,14 @@ public:
     void combineOptimizationCoeffs()
     {
         // combine corner coeffs
-        for (int i = 0; i < laserCloudCornerLastNum; ++i){
+        for (int i = 0; i < laserCloudCornerLastDSNum; ++i){
             if (laserCloudOriCornerFlag[i] == true){
                 laserCloudOri->push_back(laserCloudOriCornerVec[i]);
                 coeffSel->push_back(coeffSelCornerVec[i]);
             }
         }
         // combine surf coeffs
-        for (int i = 0; i < laserCloudSurfLastNum; ++i){
+        for (int i = 0; i < laserCloudSurfLastDSNum; ++i){
             if (laserCloudOriSurfFlag[i] == true){
                 laserCloudOri->push_back(laserCloudOriSurfVec[i]);
                 coeffSel->push_back(coeffSelSurfVec[i]);
@@ -1421,7 +1419,7 @@ public:
         if (cloudKeyPoses3D->points.empty())
             return;
 
-        if (laserCloudCornerLastNum > edgeFeatureMinValidNum && laserCloudSurfLastNum > surfFeatureMinValidNum)
+        if (laserCloudCornerLastDSNum > edgeFeatureMinValidNum && laserCloudSurfLastDSNum > surfFeatureMinValidNum)
         {
             kdtreeCornerFromMap->setInputCloud(laserCloudCornerFromMapDS);
             kdtreeSurfFromMap->setInputCloud(laserCloudSurfFromMapDS);
@@ -1442,7 +1440,7 @@ public:
 
             transformUpdate();
         } else {
-            ROS_WARN("Not enough features! Only %d edge and %d planar features available.", laserCloudCornerLastNum, laserCloudSurfLastNum);
+            ROS_WARN("Not enough features! Only %d edge and %d planar features available.", laserCloudCornerLastDSNum, laserCloudSurfLastDSNum);
         }
     }
 
