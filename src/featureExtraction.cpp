@@ -276,7 +276,7 @@ public:
             }
 
             surfaceCloudScanDS->clear();
-            if (useMappingVoxelFilter)
+            if (downsample)
             {
                 downSizeFilter.setInputCloud(surfaceCloudScan);
                 downSizeFilter.filter(*surfaceCloudScanDS);
