@@ -276,10 +276,16 @@ public:
             }
 
             surfaceCloudScanDS->clear();
-            downSizeFilter.setInputCloud(surfaceCloudScan);
-            downSizeFilter.filter(*surfaceCloudScanDS);
-
-            *surfaceCloud += *surfaceCloudScanDS;
+            if (downsample)
+            {
+                downSizeFilter.setInputCloud(surfaceCloudScan);
+                downSizeFilter.filter(*surfaceCloudScanDS);
+                *surfaceCloud += *surfaceCloudScanDS;
+            }
+            else
+            {
+                *surfaceCloud += *surfaceCloudScan;
+            }
         }
     }
 
