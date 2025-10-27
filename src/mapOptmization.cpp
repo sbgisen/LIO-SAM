@@ -491,6 +491,8 @@ public:
         typename pcl::PointCloud<POINT_TYPE>::Ptr globalSurfCloudDS_(new pcl::PointCloud<POINT_TYPE>());
         *globalSurfCloudDS_ = *convertPointCloud<POINT_TYPE>(globalSurfCloudDS);
         pcl::io::savePCDFileASCII(saveMapDirectory + "/SurfMap.pcd", *globalSurfCloudDS_);
+        *globalCornerCloud = *globalCornerCloudDS;
+        *globalSurfCloud   = *globalSurfCloudDS;
       }
       else
       {
